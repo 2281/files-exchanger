@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-6">
+        <h2>Загрузка файла</h2>
+        <form id="upload-form" enctype="multipart/form-data">
+            <div class="mb-3">
+                <label for="file" class="form-label">Выберите файл или папку</label>
+                <input class="form-control" type="file" id="file" name="file" required>
+            </div>
+            <div class="mb-3">
+                <label for="folder" class="form-label">Папка для загрузки (необязательно)</label>
+                <input class="form-control" type="text" id="folder" name="folder" placeholder="Например: /documents/library">
+            </div>
+            <button type="submit" class="btn btn-primary">Загрузить</button>
+        </form>
+    </div>
+</div>
+
+<script>
+    document.getElementById('upload-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        
+        fetch('/api/files/upload', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            alert('Файл успешно загружен!');
+            window.location.href = '/';
+        })
+        .catch(error => {
+            console.error('Ошибка загрузки:', error);
+            alert('Ошибка загрузки файла');
+        });
+    });
+</script>
+{% endblock %}

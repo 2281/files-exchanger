@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <h2>Список файлов</h2>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Имя</th>
+                    <th>Тип</th>
+                    <th>Размер</th>
+                    <th>Дата создания</th>
+                    <th>Действия</th>
+                </tr>
+            </thead>
+            <tbody id="files-list">
+                <!-- Файлы будут добавляться сюда через JavaScript -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    // Загрузка списка файлов при загрузке страницы
+    document.addEventListener('DOMContentLoaded', function() {
+        loadFiles();
+    });
+
+    // Функция загрузки файлов
+    function loadFiles() {
+        fetch('/api/files')
+            .then(response => response.json())
+            .then(data => {
+                const fileList = document.getElementById('files-list');
+                fileList.innerHTML = '';
+                
+                data.forEach(file => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${file.name}</td>
+                        <td>${file.type}</td>
+                        <td>${formatFileSize(file.size)}</td>
+                        <td>${formatDate(file.created_at)}</td>
+                        <td>
+                            <a href="/api/download/${file.id}" class="btn btn-sm btn-primary">Скачать</a>
+                            <button onclick="createLink('${file.id}')" class="btn btn-sm btn-info">Ссылка</button>
+                            <button onclick="deleteFile('${file.id}')" class="btn btn-sm btn-danger">Удалить</button>
+                        </td>
+                    `;
+                    fileList.appendChild(row);
+                });
+            })
+            .catch(error => {
+                console.error('Ошибка загрузки файлов:', error);
+                alert('Ошибка загрузки списка файлов');
+            });
+    }
+
+    // Форматирование размера файла
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
+    // Форматирование даты
+    function formatDate(dateString) {
+        const options = {year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'};
+        return new Date(dateString).toLocaleDateString('ru-RU', options);
+    }
+
+    // Создание прямой ссылки
+    function createLink(fileId) {
+        fetch(`/api/links/${fileId}`, { method: 'POST' })
+            .then(response => response.json())
+            .then(data => {
+                alert(`Прямая ссылка:\n${data.url}`);
+            })
+            .catch(error => {
+                console.error('Ошибка создания ссылки:', error);
+                alert('Ошибка создания прямой ссылки');
+            });
+    }
+
+    // Удаление файла
+    function deleteFile(fileId) {
+        if (confirm('Вы уверены, что хотите удалить этот файл?')) {
+            fetch(`/api/files/${fileId}`, { method: 'DELETE' })
+                .then(response => {
+                    if (response.ok) {
+                        loadFiles(); // Обновляем список файлов
+                    } else {
+                        alert('Ошибка удаления файла');
+                    }
+                })
+                .catch(error => {
+                    console.error('Ошибка удаления:', error);
+                    alert('Ошибка удаления файла');
+                });
+        }
+    }
+</script>
+{% endblock %}
