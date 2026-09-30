@@ -38,8 +38,8 @@ def test_upload_download():
     try:
         # Попробуем загрузить файл  
         files = {'file': open('test_file.txt', 'rb')}
-        response = requests.post('http://localhost:8001/api/upload', files=files)
-        print(f"POST /api/upload: {response.status_code}")
+        response = requests.post('http://localhost:8001/api/files/upload', files=files)
+        print(f"POST /api/files/upload: {response.status_code}")
         if response.status_code == 200:
             print("Файл загружен успешно")
             # Получим информацию о файле для скачивания
@@ -49,11 +49,11 @@ def test_upload_download():
                 print(f"ID загруженного файла: {file_id}")
                 
                 # Теперь попробуем скачать файл
-                download_url = f'http://localhost:8001/api/download/{file_id}'
+                download_url = f'http://localhost:8001/api/files/download/{file_id}'
                 print(f"Попытка скачивания файла по URL: {download_url}")
                 
                 download_response = requests.get(download_url)
-                print(f"GET /api/download/{file_id}: {download_response.status_code}")
+                print(f"GET /api/files/download/{file_id}: {download_response.status_code}")
                 
                 if download_response.status_code == 200:
                     # Сохраним скачанный файл для проверки

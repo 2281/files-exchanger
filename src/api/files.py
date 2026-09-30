@@ -40,11 +40,7 @@ async def upload_file(file: UploadFile = File(...)):
         if len(content) > max_file_size:
             raise HTTPException(status_code=400, detail="Размер файла превышает допустимый предел (100MB)")
         
-        # Сохраняем файл
-        file_location = os.path.join("storage", file.filename)
-        os.makedirs("storage", exist_ok=True)
-        
-        # Сохраняем через FileStorage
+        # Сохраняем файл через FileStorage
         saved_path = file_storage.save_file(content, file.filename)
         
         # Создаем информацию о файле
