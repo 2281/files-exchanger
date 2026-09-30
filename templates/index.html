@@ -92,6 +92,13 @@
         return new Date(dateString).toLocaleDateString('ru-RU', options);
     }
 
+    // Экранирование HTML
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
     // Создание прямой ссылки
     function createLink(fileId) {
         fetch(`/api/links/${fileId}`, { method: 'POST' })
