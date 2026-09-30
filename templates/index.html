@@ -35,19 +35,21 @@
                 const tableBody = document.getElementById('files-list');
                 tableBody.innerHTML = '';
                 
-                // Проверяем, что данные являются массивом
-                if (!Array.isArray(data)) {
+                // Проверяем, что данные содержат массив files
+                if (!data || !data.files || !Array.isArray(data.files)) {
                     console.error('Получены данные не в формате массива:', data);
                     tableBody.innerHTML = '<tr><td colspan="5" class="text-center">Ошибка: Некорректный формат данных</td></tr>';
                     return;
                 }
                 
-                if (data.length === 0) {
+                const files = data.files;
+                
+                if (files.length === 0) {
                     tableBody.innerHTML = '<tr><td colspan="5" class="text-center">Файлы отсутствуют</td></tr>';
                     return;
                 }
                 
-                data.forEach(file => {
+                files.forEach(file => {
                     const row = document.createElement('tr');
                     row.innerHTML = `
                         <td>${escapeHtml(file.name)}</td>
