@@ -42,11 +42,47 @@ def test_upload_download():
         print(f"POST /api/upload: {response.status_code}")
         if response.status_code == 200:
             print("Файл загружен успешно")
+            # Получим информацию о файле для скачивания
+            file_info = response.json()
+            if 'file' in file_info and 'id' in file_info['file']:
+                file_id = file_info['file']['id']
+                print(f"ID загруженного файла: {file_id}")
+                
+                # Теперь попробуем скачать файл
+                download_url = f'http://localhost:8001/api/download/{file_id}'
+                print(f"Попытка скачивания файла по URL: {download_url}")
+                
+                download_response = requests.get(download_url)
+                print(f"GET /api/download/{file_id}: {download_response.status_code}")
+                
+                if download_response.status_code == 200:
+                    # Сохраним скачанный файл для проверки
+                    with open('downloaded_test_file.txt', 'wb') as f:
+                        f.write(download_response.content)
+                    print("Файл успешно скачан")
+                    
+                    # Проверим содержимое
+                    with open('downloaded_test_file.txt', 'r') as f:
+                        downloaded_content = f.read()
+                    if downloaded_content == test_file_content:
+                        print("Содержимое файла совпадает")
+                    else:
+                        print("Содержимое файла не совпадает!")
+                        
+                    # Очистим скачанный файл
+                    os.remove('downloaded_test_file.txt')
+                else:
+                    print(f"Ошибка скачивания файла: {download_response.status_code}")
+                    if download_response.status_code == 404:
+                        print("Файл не найден (возможно ошибка в пути)")
+                    elif download_response.status_code == 500:
+                        print("Ошибка сервера при скачивании")
+                        
         else:
             print("Ошибка загрузки файла:", response.json())
             
     except Exception as e:
-        print(f"Ошибка при загрузке файла: {e}")
+        print(f"Ошибка при тестировании: {e}")
     
     # Очистим тестовый файл
     try:
