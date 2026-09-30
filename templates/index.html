@@ -32,7 +32,7 @@
         fetch('/api/files')
             .then(response => response.json())
             .then(data => {
-                const tableBody = document.getElementById('files-table-body');
+                const tableBody = document.getElementById('files-list');
                 tableBody.innerHTML = '';
                 
                 // Проверяем, что данные являются массивом
