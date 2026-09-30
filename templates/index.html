@@ -32,23 +32,41 @@
         fetch('/api/files')
             .then(response => response.json())
             .then(data => {
-                const fileList = document.getElementById('files-list');
-                fileList.innerHTML = '';
+                const tableBody = document.getElementById('files-table-body');
+                tableBody.innerHTML = '';
+                
+                // Проверяем, что данные являются массивом
+                if (!Array.isArray(data)) {
+                    console.error('Получены данные не в формате массива:', data);
+                    tableBody.innerHTML = '<tr><td colspan="5" class="text-center">Ошибка: Некорректный формат данных</td></tr>';
+                    return;
+                }
+                
+                if (data.length === 0) {
+                    tableBody.innerHTML = '<tr><td colspan="5" class="text-center">Файлы отсутствуют</td></tr>';
+                    return;
+                }
                 
                 data.forEach(file => {
                     const row = document.createElement('tr');
                     row.innerHTML = `
-                        <td>${file.name}</td>
+                        <td>${escapeHtml(file.name)}</td>
                         <td>${file.type}</td>
                         <td>${formatFileSize(file.size)}</td>
                         <td>${formatDate(file.created_at)}</td>
                         <td>
-                            <a href="/api/download/${file.id}" class="btn btn-sm btn-primary">Скачать</a>
-                            <button onclick="createLink('${file.id}')" class="btn btn-sm btn-info">Ссылка</button>
-                            <button onclick="deleteFile('${file.id}')" class="btn btn-sm btn-danger">Удалить</button>
+                            <a href="/api/download/${file.id}" class="btn btn-sm btn-primary">
+                                <i class="fas fa-download"></i> Скачать
+                            </a>
+                            <button onclick="createLink('${file.id}')" class="btn btn-sm btn-info">
+                                <i class="fas fa-link"></i> Ссылка
+                            </button>
+                            <button onclick="deleteFile('${file.id}')" class="btn btn-sm btn-danger">
+                                <i class="fas fa-trash"></i> Удалить
+                            </button>
                         </td>
                     `;
-                    fileList.appendChild(row);
+                    tableBody.appendChild(row);
                 });
             })
             .catch(error => {
