@@ -15,12 +15,12 @@ router = APIRouter()
 file_service = FileService()
 file_storage = FileStorage()
 
-@router.get("/", response_model=FileListResponse)
+@router.get("/")
 async def list_files():
     """Получить список всех файлов"""
     try:
         files = file_service.list_files()
-        return FileListResponse(files=files)
+        return {"files": files}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Ошибка получения списка файлов: {str(e)}")
 
