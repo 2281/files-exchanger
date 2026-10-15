@@ -92,3 +92,5 @@ async def download_file(file_id: str):
             
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Ошибка скачивания файла: {str(e)}")
+
+

@@ -1,0 +1,8 @@
+{
+    "ollama-autocoder.model": "qwen3-coder:30b",
+    "ollama-autocoder.completion keys": " ollama",
+    "ollama-autocoder.max tokens predicted": 145000,
+    "inference.endpoint": "http://10.2.181.41:11434/v1",
+    "inference.model": "codellama:13b-code-q6_K",
+    "inference.custom.model": ""
+}

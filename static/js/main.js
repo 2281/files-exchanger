@@ -24,7 +24,7 @@ function loadFiles() {
                     <td>${formatFileSize(file.size)}</td>
                     <td>${formatDate(file.created_at)}</td>
                     <td>
-                        <a href="/api/download/${file.id}" class="btn btn-sm btn-primary">
+                        <a href="/api/files/download/${file.id}" class="btn btn-sm btn-primary">
                             <i class="fas fa-download"></i> Скачать
                         </a>
                         <button onclick="createLink('${file.id}')" class="btn btn-sm btn-info">
