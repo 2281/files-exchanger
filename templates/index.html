@@ -1,133 +1,176 @@
-{% extends "base.html" %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Файловый обменник</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/">Файловый обменник</a>
+            <div class="d-flex align-items-center gap-2">
+                <span class="navbar-text me-2"><i class="fas fa-user"></i> {{ user.email }}</span>
+                <button class="btn btn-outline-light btn-sm" onclick="showLinks()">
+                    <i class="fas fa-link"></i> Мои ссылки
+                </button>
+                <button class="btn btn-outline-light btn-sm" onclick="logout()">
+                    <i class="fas fa-sign-out-alt"></i> Выйти
+                </button>
+            </div>
+        </div>
+    </nav>
 
-{% block content %}
-<div class="row">
-    <div class="col-md-12">
-        <h2>Список файлов</h2>
-        <table class="table table-striped">
-            <thead>
-                <tr>
-                    <th>Имя</th>
-                    <th>Тип</th>
-                    <th>Размер</th>
-                    <th>Дата создания</th>
-                    <th>Действия</th>
-                </tr>
-            </thead>
-            <tbody id="files-list">
-                <!-- Файлы будут добавляться сюда через JavaScript -->
-            </tbody>
-        </table>
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-md-12">
+                <div class="d-flex align-items-center gap-2 mb-3">
+                    <a id="back-to-root" class="btn btn-outline-secondary btn-sm d-none" href="/">
+                        <i class="fas fa-home"></i> В корень
+                    </a>
+                    <a id="back-to-parent" class="btn btn-outline-secondary btn-sm d-none" href="/">
+                        <i class="fas fa-level-up-alt"></i> Наверх
+                    </a>
+                    <h2 id="page-title" class="mb-0">Мои файлы</h2>
+                </div>
+                <div id="owner-actions" class="mb-3">
+                    <button class="btn btn-success" onclick="showModal('uploadModal')">
+                        <i class="fas fa-upload"></i> Загрузить файл
+                    </button>
+                    <button class="btn btn-primary" onclick="showModal('createFolderModal')">
+                        <i class="fas fa-folder-plus"></i> Создать папку
+                    </button>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-striped align-middle">
+                        <thead>
+                            <tr>
+                                <th>Имя</th>
+                                <th>Размер</th>
+                                <th>Владелец</th>
+                                <th>Доступ</th>
+                                <th>Дата создания</th>
+                                <th>Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody id="files-list">
+                            <!-- Файлы будут добавляться сюда через JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<!-- Модальное окно загрузки файла -->
+<div class="modal fade" id="uploadModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Загрузка файла</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="uploadForm">
+                    <div class="mb-3">
+                        <label for="file" class="form-label">Выберите файл</label>
+                        <input class="form-control" type="file" id="file" name="file" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Загрузить</button>
+                </form>
+            </div>
+        </div>
     </div>
 </div>
 
-<script>
-    // Загрузка списка файлов при загрузке страницы
-    document.addEventListener('DOMContentLoaded', function() {
-        loadFiles();
-    });
+<!-- Модальное окно создания папки -->
+<div class="modal fade" id="createFolderModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Создание папки</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="createFolderForm">
+                    <div class="mb-3">
+                        <label for="folderName" class="form-label">Название папки</label>
+                        <input type="text" class="form-control" id="folderName" name="folderName" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Создать</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
 
-    // Функция загрузки файлов
-    function loadFiles() {
-        fetch('/api/files')
-            .then(response => response.json())
-            .then(data => {
-                const tableBody = document.getElementById('files-list');
-                tableBody.innerHTML = '';
-                
-                // Проверяем, что данные содержат массив files
-                if (!data || !data.files || !Array.isArray(data.files)) {
-                    console.error('Получены данные не в формате массива:', data);
-                    tableBody.innerHTML = '<tr><td colspan="5" class="text-center">Ошибка: Некорректный формат данных</td></tr>';
-                    return;
-                }
-                
-                const files = data.files;
-                
-                if (files.length === 0) {
-                    tableBody.innerHTML = '<tr><td colspan="5" class="text-center">Файлы отсутствуют</td></tr>';
-                    return;
-                }
-                
-                files.forEach(file => {
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td>${escapeHtml(file.name)}</td>
-                        <td>${file.type}</td>
-                        <td>${formatFileSize(file.size)}</td>
-                        <td>${formatDate(file.created_at)}</td>
-                        <td>
-                        <a href="/api/files/download/${file.id}" class="btn btn-sm btn-primary">
-                            <i class="fas fa-download"></i> Скачать
-                        </a>
-                            <button onclick="createLink('${file.id}')" class="btn btn-sm btn-info">
-                                <i class="fas fa-link"></i> Ссылка
-                            </button>
-                            <button onclick="deleteFile('${file.id}')" class="btn btn-sm btn-danger">
-                                <i class="fas fa-trash"></i> Удалить
-                            </button>
-                        </td>
-                    `;
-                    tableBody.appendChild(row);
-                });
-            })
-            .catch(error => {
-                console.error('Ошибка загрузки файлов:', error);
-                alert('Ошибка загрузки списка файлов');
-            });
-    }
+<!-- Модальное окно создания временной ссылки -->
+<div class="modal fade" id="createLinkModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Временная ссылка: <span id="linkFileName"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="createLinkForm">
+                    <input type="hidden" id="linkFileId">
+                    <div class="mb-3">
+                        <label for="linkExpires" class="form-label">Срок действия</label>
+                        <select class="form-select" id="linkExpires">
+                            <option value="1">1 час</option>
+                            <option value="24">1 день</option>
+                            <option value="168" selected>7 дней</option>
+                            <option value="720">30 дней</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Создать ссылку</button>
+                </form>
+                <div id="linkResult" class="mt-3 d-none">
+                    <label for="linkUrl" class="form-label">
+                        Ссылка (скачивание без входа, действует до <span id="linkExpiresAt"></span>)
+                    </label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="linkUrl" readonly>
+                        <button class="btn btn-outline-secondary" type="button" onclick="copyLink()">
+                            <i class="fas fa-copy"></i> Копировать
+                        </button>
+                    </div>
+                    <div class="form-text">Сохраните ссылку: после закрытия окна её нельзя будет посмотреть повторно.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
-    // Форматирование размера файла
-    function formatFileSize(bytes) {
-        if (bytes === 0) return '0 Bytes';
-        const k = 1024;
-        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-        const i = Math.floor(Math.log(bytes) / Math.log(k));
-        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-    }
+<!-- Модальное окно со списком своих ссылок -->
+<div class="modal fade" id="linksModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Мои временные ссылки</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <table class="table table-sm align-middle">
+                    <thead>
+                        <tr>
+                            <th>Файл / папка</th>
+                            <th>Создана</th>
+                            <th>Действует до</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="links-list"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
 
-    // Форматирование даты
-    function formatDate(dateString) {
-        const options = {year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'};
-        return new Date(dateString).toLocaleDateString('ru-RU', options);
-    }
-
-    // Экранирование HTML
-    function escapeHtml(text) {
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
-    }
-
-    // Создание прямой ссылки
-    function createLink(fileId) {
-        fetch(`/api/links/${fileId}`, { method: 'POST' })
-            .then(response => response.json())
-            .then(data => {
-                alert(`Прямая ссылка:\n${data.url}`);
-            })
-            .catch(error => {
-                console.error('Ошибка создания ссылки:', error);
-                alert('Ошибка создания прямой ссылки');
-            });
-    }
-
-    // Удаление файла
-    function deleteFile(fileId) {
-        if (confirm('Вы уверены, что хотите удалить этот файл?')) {
-            fetch(`/api/files/${fileId}`, { method: 'DELETE' })
-                .then(response => {
-                    if (response.ok) {
-                        loadFiles(); // Обновляем список файлов
-                    } else {
-                        alert('Ошибка удаления файла');
-                    }
-                })
-                .catch(error => {
-                    console.error('Ошибка удаления:', error);
-                    alert('Ошибка удаления файла');
-                });
-        }
-    }
-</script>
-{% endblock %}
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/static/js/main.js"></script>
+</body>
+</html>

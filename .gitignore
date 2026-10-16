@@ -1,0 +1,11 @@
+# Окружение и секреты
+env/
+.env
+
+# Данные приложения
+/files.db
+/storage/
+
+# Python
+__pycache__/
+*.pyc

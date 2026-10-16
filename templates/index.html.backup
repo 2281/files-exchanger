@@ -1,0 +1,412 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <h2>Список файлов</h2>
+        <div class="mb-3">
+            <button class="btn btn-success" onclick="showUploadModal()">
+                <i class="fas fa-upload"></i> Загрузить файл
+            </button>
+            <button class="btn btn-primary" onclick="showCreateFolderModal()">
+                <i class="fas fa-folder-plus"></i> Создать папку
+            </button>
+        </div>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Имя</th>
+                    <th>Тип</th>
+                    <th>Размер</th>
+                    <th>Дата создания</th>
+                    <th>Действия</th>
+                </tr>
+            </thead>
+            <tbody id="files-list">
+                <!-- Файлы будут добавляться сюда через JavaScript -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Модальное окно загрузки файла -->
+<div class="modal fade" id="uploadModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Загрузка файла</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="uploadForm">
+                    <div class="mb-3">
+                        <label for="file" class="form-label">Выберите файл</label>
+                        <input class="form-control" type="file" id="file" name="file" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="folderId" class="form-label">Папка для загрузки (необязательно)</label>
+                        <select class="form-control" id="folderId" name="folderId">
+                            <option value="">Не загружать в папку</option>
+                            <!-- Папки будут добавляться сюда через JavaScript -->
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Загрузить</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно создания папки -->
+<div class="modal fade" id="createFolderModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Создание папки</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="createFolderForm">
+                    <div class="mb-3">
+                        <label for="folderName" class="form-label">Название папки</label>
+                        <input type="text" class="form-control" id="folderName" name="folderName" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Создать</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно содержимого папки -->
+<div class="modal fade" id="folderModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="folderTitle">Содержимое папки</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="folderContent">
+                    <!-- Содержимое папки будет здесь -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Загрузка списка файлов при загрузке страницы
+    document.addEventListener('DOMContentLoaded', function() {
+        loadFiles();
+    });
+
+    // Функция загрузки файлов
+    function loadFiles() {
+        fetch('/api/files')
+            .then(response => response.json())
+            .then(data => {
+                const tableBody = document.getElementById('files-list');
+                tableBody.innerHTML = '';
+                
+                // Проверяем, что данные содержат массив files
+                if (!data || !data.files || !Array.isArray(data.files)) {
+                    console.error('Получены данные не в формате массива:', data);
+                    tableBody.innerHTML = '<tr><td colspan="5" class="text-center">Ошибка: Некорректный формат данных</td></tr>';
+                    return;
+                }
+                
+                const files = data.files;
+                
+                if (files.length === 0) {
+                    tableBody.innerHTML = '<tr><td colspan="5" class="text-center">Файлы отсутствуют</td></tr>';
+                    return;
+                }
+                
+                files.forEach(file => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${escapeHtml(file.name)}</td>
+                        <td>${file.type}</td>
+                        <td>${formatFileSize(file.size)}</td>
+                        <td>${formatDate(file.created_at)}</td>
+                        <td>
+                        <a href="/api/files/download/${file.id}" class="btn btn-sm btn-primary">
+                            <i class="fas fa-download"></i> Скачать
+                        </a>
+                        ${file.type === 'folder' ? 
+                            `<button onclick="enterFolder('${file.id}')" class="btn btn-sm btn-info">
+                                <i class="fas fa-folder-open"></i> Открыть
+                            </button>` : ''
+                        }
+                            <button onclick="createLink('${file.id}')" class="btn btn-sm btn-info">
+                                <i class="fas fa-link"></i> Ссылка
+                            </button>
+                            <button onclick="deleteFile('${file.id}')" class="btn btn-sm btn-danger">
+                                <i class="fas fa-trash"></i> Удалить
+                            </button>
+                        </td>
+                    `;
+                    tableBody.appendChild(row);
+                });
+            })
+            .catch(error => {
+                console.error('Ошибка загрузки файлов:', error);
+                alert('Ошибка загрузки списка файлов');
+            });
+    }
+
+    // Форматирование размера файла
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
+    // Форматирование даты
+    function formatDate(dateString) {
+        const options = {year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'};
+        return new Date(dateString).toLocaleDateString('ru-RU', options);
+    }
+
+    // Экранирование HTML
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // Создание прямой ссылки
+    function createLink(fileId) {
+        fetch(`/api/links/${fileId}`, { method: 'POST' })
+            .then(response => response.json())
+            .then(data => {
+                alert(`Прямая ссылка:\n${data.url}`);
+            })
+            .catch(error => {
+                console.error('Ошибка создания ссылки:', error);
+                alert('Ошибка создания прямой ссылки');
+            });
+    }
+
+    // Удаление файла
+    function deleteFile(fileId) {
+        if (confirm('Вы уверены, что хотите удалить этот файл?')) {
+            fetch(`/api/files/${fileId}`, { method: 'DELETE' })
+                .then(response => {
+                    if (response.ok) {
+                        loadFiles(); // Обновляем список файлов
+                    } else {
+                        alert('Ошибка удаления файла');
+                    }
+                })
+                .catch(error => {
+                    console.error('Ошибка удаления:', error);
+                    alert('Ошибка удаления файла');
+                });
+        }
+    }
+
+    // Открытие папки
+    function enterFolder(folderId) {
+        fetch(`/api/files/folder/${folderId}`)
+            .then(response => response.json())
+            .then(data => {
+                const folderContent = data.content;
+                let html = '<div class="table-responsive"><table class="table table-striped">';
+                html += '<thead><tr><th>Имя</th><th>Тип</th><th>Размер</th><th>Дата создания</th><th>Действия</th></tr></thead><tbody>';
+                
+                folderContent.forEach(file => {
+                    html += `
+                        <tr>
+                            <td>${escapeHtml(file.name)}</td>
+                            <td>${file.type}</td>
+                            <td>${formatFileSize(file.size)}</td>
+                            <td>${formatDate(file.created_at)}</td>
+                            <td>
+                                <a href="/api/files/download/${file.id}" class="btn btn-sm btn-primary">
+                                    <i class="fas fa-download"></i> Скачать
+                                </a>
+                                ${file.type === 'folder' ? 
+                                    `<button onclick="enterFolder('${file.id}')" class="btn btn-sm btn-info">
+                                        <i class="fas fa-folder-open"></i> Открыть
+                                    </button>` : ''
+                                }
+                                <button onclick="createLink('${file.id}')" class="btn btn-sm btn-info">
+                                    <i class="fas fa-link"></i> Ссылка
+                                </button>
+                                <button onclick="deleteFile('${file.id}')" class="btn btn-sm btn-danger">
+                                    <i class="fas fa-trash"></i> Удалить
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                });
+                
+                html += '</tbody></table></div>';
+                document.getElementById('folderContent').innerHTML = html;
+                document.getElementById('folderTitle').innerText = 'Содержимое папки';
+                const modal = new bootstrap.Modal(document.getElementById('folderModal'));
+                modal.show();
+            })
+            .catch(error => {
+                console.error('Ошибка получения содержимого папки:', error);
+                alert('Ошибка получения содержимого папки');
+            });
+    }
+
+    // Показать модальное окно загрузки файла
+    function showUploadModal() {
+        const modal = new bootstrap.Modal(document.getElementById('uploadModal'));
+        modal.show();
+    }
+
+    // Показать модальное окно создания папки
+    function showCreateFolderModal() {
+        const modal = new bootstrap.Modal(document.getElementById('createFolderModal'));
+        modal.show();
+    }
+
+    // Обработка загрузки файла (новый код)
+    document.addEventListener('DOMContentLoaded', function() {
+        // Обработчик формы загрузки файла
+        const uploadForm = document.getElementById('uploadForm');
+        if (uploadForm) {
+            uploadForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const fileInput = document.getElementById('file');
+                const file = fileInput.files[0];
+                
+                if (!file) {
+                    alert('Пожалуйста, выберите файл');
+                    return;
+                }
+                
+                const formData = new FormData();
+                formData.append('file', file);
+                
+                try {
+                    const response = await fetch('/api/files/upload', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    if (response.ok) {
+                        const result = await response.json();
+                        alert('Файл успешно загружен');
+                        loadFiles(); // Обновляем список файлов
+                        
+                        // Закрываем модальное окно
+                        const modal = bootstrap.Modal.getInstance(document.getElementById('uploadModal'));
+                        if (modal) {
+                            modal.hide();
+                        }
+                    } else {
+                        const error = await response.json();
+                        alert(`Ошибка загрузки файла: ${error.detail}`);
+                    }
+                } catch (error) {
+                    console.error('Ошибка при загрузке файла:', error);
+                    alert('Ошибка при загрузке файла');
+                }
+            });
+        }
+
+        // Обработчик формы создания папки
+        const createFolderForm = document.getElementById('createFolderForm');
+        if (createFolderForm) {
+            createFolderForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const folderNameInput = document.getElementById('folderName');
+                const folderName = folderNameInput.value.trim();
+                
+                if (!folderName) {
+                    alert('Пожалуйста, введите название папки');
+                    return;
+                }
+                
+                try {
+                    // Передаем имя через query-параметр
+                    const response = await fetch(`/api/files/folder?name=${encodeURIComponent(folderName)}`, {
+                        method: 'POST'
+                    });
+                    
+                    if (response.ok) {
+                        const result = await response.json();
+                        alert('Папка успешно создана');
+                        loadFiles(); // Обновляем список файлов
+                        
+                        // Закрываем модальное окно
+                        const modal = bootstrap.Modal.getInstance(document.getElementById('createFolderModal'));
+                        if (modal) {
+                            modal.hide();
+                        }
+                        
+                        // Очищаем поле ввода
+                        folderNameInput.value = '';
+                    } else {
+                        const error = await response.json();
+                        alert(`Ошибка создания папки: ${error.detail}`);
+                    }
+                } catch (error) {
+                    console.error('Ошибка при создании папки:', error);
+                    alert('Ошибка при создании папки');
+                }
+            });
+        }
+
+        // Обработчик формы загрузки файла в папку
+        const uploadToFolderForm = document.getElementById('uploadToFolderForm');
+        if (uploadToFolderForm) {
+            uploadToFolderForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const fileInput = document.getElementById('folderFile');
+                const folderId = document.getElementById('folderId').value;
+                const file = fileInput.files[0];
+                
+                if (!file) {
+                    alert('Пожалуйста, выберите файл');
+                    return;
+                }
+                
+                const formData = new FormData();
+                formData.append('file', file);
+                
+                try {
+                    const response = await fetch(`/api/files/folder/${folderId}/upload`, {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    if (response.ok) {
+                        const result = await response.json();
+                        alert('Файл успешно загружен в папку');
+                        // Обновляем содержимое папки или список файлов
+                        loadFiles();
+                        
+                        // Закрываем модальное окно
+                        const modal = bootstrap.Modal.getInstance(document.getElementById('folderModal'));
+                        if (modal) {
+                            modal.hide();
+                        }
+                    } else {
+                        const error = await response.json();
+                        alert(`Ошибка загрузки файла: ${error.detail}`);
+                    }
+                } catch (error) {
+                    console.error('Ошибка при загрузке файла в папку:', error);
+                    alert('Ошибка при загрузке файла в папку');
+                }
+            });
+        }
+
+        // Загрузка списка файлов при загрузке страницы
+        loadFiles();
+    });
+</script>
+{% endblock %}
